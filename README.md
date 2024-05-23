@@ -9,7 +9,7 @@ This repository contains a set of bash scripts for automating backup and restore
 - `restore.sh`: Restores the system to a state from X days ago using full and incremental backups.
 - `restore_success.sh`: Cleans up old backups and creates a new full backup after a successful restore.
 - `restore_failed.sh`: Reverts the system to the previous state if a restore fails.
-- `setup.sh`: Downloads all the scripts, sets the correct permissions, and sets up a cron job for automated backups.
+- `setup.sh`: Downloads all the scripts and removes itself after execution.
 
 ## Installation
 
@@ -21,7 +21,26 @@ This repository contains a set of bash scripts for automating backup and restore
 
 2. Run the setup script:
     ```sh
-    curl -o setup.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/setup.sh && bash setup.sh
+    curl -o setup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/setup.sh && bash setup.sh
+    ```
+
+3. Make the scripts executable:
+    ```sh
+    chmod +x /home/ubuntu/backup.sh
+    chmod +x /home/ubuntu/manual_backup.sh
+    chmod +x /home/ubuntu/restore.sh
+    chmod +x /home/ubuntu/restore_success.sh
+    chmod +x /home/ubuntu/restore_failed.sh
+    ```
+
+4. Set up the cron job to run the automated backup script daily at 4 AM:
+    ```sh
+    crontab -e
+    ```
+
+    Add the following line to the crontab file:
+    ```sh
+    0 4 * * * /home/ubuntu/backup.sh
     ```
 
 ## Usage
@@ -35,25 +54,4 @@ The `backup.sh` script is set up to run daily at 4 AM by the cron job.
 To create a manual backup, run:
 ```sh
 ./manual_backup.sh
-```
-
-### Restore
-To restore the system to a state from X days ago, run:
-
-```sh
-./restore.sh <days_ago>
-```
-
-### Post-Restore Success Cleanup
-To clean up and create a new full backup after a successful restore, run:
-
-```sh
-./restore_success.sh
-```
-
-### Post-Restore Failure Cleanup
-To revert to the previous state if a restore fails, run:
-
-```sh
-./restore_failed.sh
 ```

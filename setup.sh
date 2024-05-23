@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Variables
-REPO_URL="https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/"
+REPO_URL="https://raw.githubusercontent.com/yourusername/backup-scripts/main"
 SCRIPTS=("backup.sh" "manual_backup.sh" "restore.sh" "restore_success.sh" "restore_failed.sh")
 INSTALL_DIR="/home/ubuntu"
-CRON_JOB="0 4 * * * $INSTALL_DIR/backup.sh"
 SCRIPT_NAME=$(basename "$0")
+LOG_FILE="$INSTALL_DIR/setup.log"
 
 # Function to log messages
 log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - $1"
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - [setup.sh] - $1" | tee -a $LOG_FILE
 }
 
 # Ensure the script is run with sufficient permissions
@@ -27,22 +27,6 @@ for SCRIPT in "${SCRIPTS[@]}"; do
         exit 1
     fi
 done
-
-# Make scripts executable
-for SCRIPT in "${SCRIPTS[@]}"; do
-    chmod +x "$INSTALL_DIR/$SCRIPT"
-    if [ $? -ne 0 ]; then
-        log "ERROR: Failed to make $SCRIPT executable"
-        exit 1
-    fi
-done
-
-# Setup cron job
-(crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-if [ $? -ne 0 ]; then
-    log "ERROR: Failed to set up cron job"
-    exit 1
-fi
 
 log "Setup completed successfully."
 
