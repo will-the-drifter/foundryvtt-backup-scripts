@@ -14,11 +14,11 @@ This repository contains a set of bash scripts for automating backup and restore
 
 1. Download the scripts:
     ```sh
-    curl -o /home/ubuntu/backup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/backup.sh
-    curl -o /home/ubuntu/manual_backup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/manual_backup.sh
-    curl -o /home/ubuntu/restore.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/restore.sh
-    curl -o /home/ubuntu/restore_success.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/restore_success.sh
-    curl -o /home/ubuntu/restore_failed.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/restore_failed.sh
+    curl -o /home/ubuntu/backup.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/backup.sh
+    curl -o /home/ubuntu/manual_backup.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/manual_backup.sh
+    curl -o /home/ubuntu/restore.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore.sh
+    curl -o /home/ubuntu/restore_success.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore_success.sh
+    curl -o /home/ubuntu/restore_failed.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore_failed.sh
     ```
 
 2. Make the scripts executable:
