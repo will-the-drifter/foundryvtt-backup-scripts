@@ -21,7 +21,7 @@ This repository contains a set of bash scripts for automating backup and restore
 
 2. Run the setup script:
     ```sh
-    curl -o setup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/setup.sh && bash setup.sh
+    curl -o setup.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/setup.sh && bash setup.sh
     ```
 
 ## Usage
