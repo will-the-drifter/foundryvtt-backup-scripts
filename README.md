@@ -23,11 +23,11 @@ This repository contains a set of bash scripts for automating backup and restore
 
 2. Make the scripts executable:
     ```sh
-    chmod +x /home/ubuntu/backup.sh
-    chmod +x /home/ubuntu/manual_backup.sh
-    chmod +x /home/ubuntu/restore.sh
-    chmod +x /home/ubuntu/restore_success.sh
-    chmod +x /home/ubuntu/restore_failed.sh
+    chmod a+x /home/ubuntu/backup.sh
+    chmod a+x /home/ubuntu/manual_backup.sh
+    chmod a+x /home/ubuntu/restore.sh
+    chmod a+x /home/ubuntu/restore_success.sh
+    chmod a+x /home/ubuntu/restore_failed.sh
     ```
 
 3. Set up the cron job to run the automated backup script daily at 4 AM:
