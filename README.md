@@ -51,5 +51,25 @@ The `backup.sh` script is set up to run daily at 4 AM by the cron job.
 To create a manual backup, run:
 ```sh
 ./manual_backup.sh
+```
 
+### Restore
+To restore the system to a state from X days ago, run:
+
+```sh
+./restore.sh <days_ago>
+```
+
+### Post-Restore Success Cleanup
+To clean up and create a new full backup after a successful restore, run:
+
+```sh
+./restore_success.sh
+```
+
+### Post-Restore Failure Cleanup
+To revert to the previous state if a restore fails, run:
+
+```sh
+./restore_failed.sh
 ```
