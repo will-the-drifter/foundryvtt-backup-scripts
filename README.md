@@ -9,22 +9,19 @@ This repository contains a set of bash scripts for automating backup and restore
 - `restore.sh`: Restores the system to a state from X days ago using full and incremental backups.
 - `restore_success.sh`: Cleans up old backups and creates a new full backup after a successful restore.
 - `restore_failed.sh`: Reverts the system to the previous state if a restore fails.
-- `setup.sh`: Downloads all the scripts and removes itself after execution.
 
 ## Installation
 
-1. Clone the repository:
+1. Download the scripts:
     ```sh
-    git clone https://github.com/yourusername/backup-scripts.git
-    cd backup-scripts
+    curl -o /home/ubuntu/backup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/backup.sh
+    curl -o /home/ubuntu/manual_backup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/manual_backup.sh
+    curl -o /home/ubuntu/restore.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/restore.sh
+    curl -o /home/ubuntu/restore_success.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/restore_success.sh
+    curl -o /home/ubuntu/restore_failed.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/restore_failed.sh
     ```
 
-2. Run the setup script:
-    ```sh
-    curl -o setup.sh https://raw.githubusercontent.com/yourusername/backup-scripts/main/setup.sh && bash setup.sh
-    ```
-
-3. Make the scripts executable:
+2. Make the scripts executable:
     ```sh
     chmod +x /home/ubuntu/backup.sh
     chmod +x /home/ubuntu/manual_backup.sh
@@ -33,7 +30,7 @@ This repository contains a set of bash scripts for automating backup and restore
     chmod +x /home/ubuntu/restore_failed.sh
     ```
 
-4. Set up the cron job to run the automated backup script daily at 4 AM:
+3. Set up the cron job to run the automated backup script daily at 4 AM:
     ```sh
     crontab -e
     ```
@@ -54,4 +51,5 @@ The `backup.sh` script is set up to run daily at 4 AM by the cron job.
 To create a manual backup, run:
 ```sh
 ./manual_backup.sh
+
 ```
