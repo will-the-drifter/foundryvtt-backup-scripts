@@ -2,16 +2,16 @@
 
 # Ensure the script receives the correct number of parameters
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <days_ago>"
+    echo "Usage: $0 <days_ago|full>"
     exit 1
 fi
 
 # Variables
-DAYS_AGO=$1
+ARG=$1
 BACKUP_FOLDER="/home/ubuntu/foundrybackup"
 RESTORE_LOCATION="/home/ubuntu"
 LOG_FILE="/home/ubuntu/restore.log"
-DATE=$(date -d "$DAYS_AGO days ago" +%d-%m-%Y)
+DATE=$(date +%d-%m-%Y-%H%M%S)
 
 # Function to log messages
 log() {
@@ -60,69 +60,103 @@ log "Removing original directories."
 rm -rf /home/ubuntu/foundry
 rm -rf /home/ubuntu/foundryuserdata
 
-# Find the full backup file
-log "Finding full backup file."
-FULL_BACKUP=$(find $BACKUP_FOLDER -name "*full-backup*.tar.gz" | sort | head -n 1)
+# Function to restore the last full backup
+restore_full_backup() {
+    log "Restoring the last full backup."
+    FULL_BACKUP=$(find $BACKUP_FOLDER -name "*full-backup*.tar.gz" | sort | tail -n 1)
 
-if [ -z "$FULL_BACKUP" ]; then
-    log "ERROR: No full backup found."
-    exit 1
-fi
-
-log "Full backup found: $FULL_BACKUP"
-
-# Find the incremental backups
-log "Finding incremental backups."
-INCREMENTAL_BACKUPS=$(find $BACKUP_FOLDER -name "*incremental-backup*.tar.gz" | sort)
-
-if [ -z "$INCREMENTAL_BACKUPS" ]; then
-    log "ERROR: No incremental backups found."
-    exit 1
-fi
-
-# Filter incremental backups up to the specified date
-log "Filtering incremental backups up to the specified date."
-INCREMENTAL_BACKUPS_TO_RESTORE=$(echo "$INCREMENTAL_BACKUPS" | while read line; do
-    BACKUP_DATE=$(echo $line | grep -oP '\d{2}-\d{2}-\d{4}' | head -1)
-    BACKUP_TIMESTAMP=$(date -d "$BACKUP_DATE" +%s)
-    TARGET_TIMESTAMP=$(date -d "$DATE" +%s)
-
-    if [ $BACKUP_TIMESTAMP -le $TARGET_TIMESTAMP ]; then
-        echo $line
-    fi
-done)
-
-if [ -z "$INCREMENTAL_BACKUPS_TO_RESTORE" ]; then
-    log "ERROR: No incremental backups to restore."
-    exit 1
-fi
-
-log "Incremental backups to restore: $INCREMENTAL_BACKUPS_TO_RESTORE"
-
-# Restore the full backup
-log "Restoring full backup."
-tar -xzf $FULL_BACKUP -C /
-if [ $? -eq 0 ]; then
-    log "Full backup restored successfully."
-else
-    log "ERROR: Failed to restore full backup."
-    exit 1
-fi
-
-# Restore the incremental backups in order
-echo "$INCREMENTAL_BACKUPS_TO_RESTORE" | while read line; do
-    log "Restoring incremental backup: $line"
-    tar -xzf $line -C /
-    if [ $? -eq 0 ]; then
-        log "Incremental backup $line restored successfully."
-    else
-        log "ERROR: Failed to restore incremental backup: $line"
+    if [ -z "$FULL_BACKUP" ]; then
+        log "ERROR: No full backup found."
         exit 1
     fi
-done
+
+    log "Full backup found: $FULL_BACKUP"
+    tar -xzf $FULL_BACKUP -C /
+    if [ $? -eq 0 ]; then
+        log "Full backup restored successfully."
+    else
+        log "ERROR: Failed to restore full backup."
+        exit 1
+    fi
+}
+
+# Function to restore to a state from X days ago
+restore_incremental_backup() {
+    DAYS_AGO=$1
+    DATE=$(date -d "$DAYS_AGO days ago" +%d-%m-%Y)
+    
+    log "Restoring to a state from $DAYS_AGO days ago."
+
+    # Find the full backup file
+    FULL_BACKUP=$(find $BACKUP_FOLDER -name "*full-backup*.tar.gz" | sort | head -n 1)
+
+    if [ -z "$FULL_BACKUP" ]; then
+        log "ERROR: No full backup found."
+        exit 1
+    fi
+
+    log "Full backup found: $FULL_BACKUP"
+
+    # Find the incremental backups
+    log "Finding incremental backups."
+    INCREMENTAL_BACKUPS=$(find $BACKUP_FOLDER -name "*incremental-backup*.tar.gz" | sort)
+
+    if [ -z "$INCREMENTAL_BACKUPS" ]; then
+        log "ERROR: No incremental backups found."
+        exit 1
+    fi
+
+    # Filter incremental backups up to the specified date
+    log "Filtering incremental backups up to the specified date."
+    INCREMENTAL_BACKUPS_TO_RESTORE=$(echo "$INCREMENTAL_BACKUPS" | while read line; do
+        BACKUP_DATE=$(echo $line | grep -oP '\d{2}-\d{2}-\d{4}' | head -1)
+        BACKUP_TIMESTAMP=$(date -d "$BACKUP_DATE" +%s)
+        TARGET_TIMESTAMP=$(date -d "$DATE" +%s)
+
+        if [ $BACKUP_TIMESTAMP -le $TARGET_TIMESTAMP ]; then
+            echo $line
+        fi
+    done)
+
+    if [ -z "$INCREMENTAL_BACKUPS_TO_RESTORE" ]; then
+        log "ERROR: No incremental backups to restore."
+        exit 1
+    fi
+
+    log "Incremental backups to restore: $INCREMENTAL_BACKUPS_TO_RESTORE"
+
+    # Restore the full backup
+    log "Restoring full backup."
+    tar -xzf $FULL_BACKUP -C /
+    if [ $? -eq 0 ]; then
+        log "Full backup restored successfully."
+    else
+        log "ERROR: Failed to restore full backup."
+        exit 1
+    fi
+
+    # Restore the incremental backups in order
+    echo "$INCREMENTAL_BACKUPS_TO_RESTORE" | while read line; do
+        log "Restoring incremental backup: $line"
+        tar -xzf $line -C /
+        if [ $? -eq 0 ]; then
+            log "Incremental backup $line restored successfully."
+        else
+            log "ERROR: Failed to restore incremental backup: $line"
+            exit 1
+        fi
+    done
+}
+
+# Main logic to choose the restore method
+if [ "$ARG" == "full" ]; then
+    restore_full_backup
+else
+    restore_incremental_backup "$ARG"
+fi
 
 # Start the Foundry program
 log "Starting Foundry program."
 pm2 start foundry
 
-log "Restore to $DAYS_AGO days ago completed successfully."
+log "Restore process completed successfully."
