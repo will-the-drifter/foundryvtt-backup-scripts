@@ -59,6 +59,10 @@ To restore the system to a state from X days ago, run:
 ```sh
 sudo ./restore.sh <days_ago>
 ```
+To restore the last full backup, run:
+```sh
+sudo ./restore.sh full
+```
 
 ### Post-Restore Success Cleanup
 To clean up and create a new full backup after a successful restore, run:
