@@ -1,13 +1,6 @@
 #!/bin/bash
 
-# Ensure the script receives the correct number of parameters
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <days_ago|full>"
-    exit 1
-fi
-
 # Variables
-ARG=$1
 BACKUP_FOLDER="/home/ubuntu/foundrybackup"
 RESTORE_LOCATION="/home/ubuntu"
 LOG_FILE="/home/ubuntu/restore.log"
@@ -37,6 +30,25 @@ fi
 
 # Ensure restore location exists
 mkdir -p $RESTORE_LOCATION
+
+# Find the last full backup and determine how many days ago it was made
+LAST_FULL_BACKUP=$(find $BACKUP_FOLDER -name "*full-backup*.tar.gz" | sort | tail -n 1)
+
+if [ -z "$LAST_FULL_BACKUP" ]; then
+    log "ERROR: No full backup found."
+    exit 1
+fi
+
+LAST_FULL_BACKUP_DATE=$(basename $LAST_FULL_BACKUP | grep -oP '\d{2}-\d{2}-\d{4}')
+LAST_FULL_BACKUP_TIMESTAMP=$(date -d "$LAST_FULL_BACKUP_DATE" +%s)
+CURRENT_TIMESTAMP=$(date +%s)
+DAYS_AGO=$(( (CURRENT_TIMESTAMP - LAST_FULL_BACKUP_TIMESTAMP) / 86400 ))
+
+log "The last full backup was made $DAYS_AGO days ago."
+
+# Prompt the user for the restore option
+echo "Enter the number of days ago to restore, or type 'full' to restore the last full backup:"
+read ARG
 
 # Check disk space before stopping the Foundry program
 check_disk_space
