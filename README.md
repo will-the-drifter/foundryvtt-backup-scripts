@@ -4,76 +4,86 @@ This repository contains a set of bash scripts for automating backup and restore
 
 ## Scripts
 
-- `backup.sh`: Automates the backup process, creating incremental backups daily and full backups every 8 days.
-- `manual_backup.sh`: Creates a full backup manually, deleting previous backups.
-- `restore.sh`: Restores the system to a state from X days ago using full and incremental backups.
+- `backup.sh`: Automates the backup process, creating incremental backups daily and full backups every Wednesday at 4 AM.
+- `manual_backup.sh`: Creates a full backup manually without affecting other scheduled backups.
+- `restore.sh`: Restores the system to a specified date using full and incremental backups.
 - `restore_success.sh`: Cleans up old backups and creates a new full backup after a successful restore.
 - `restore_failed.sh`: Reverts the system to the previous state if a restore fails.
+- `delete_old_backups.sh`: Deletes old backups that are older than the most recent full backup.
 
 ## Installation
 
-1. Download the scripts:
-    ```sh
-    curl -o /home/ubuntu/backup.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/backup.sh
-    curl -o /home/ubuntu/manual_backup.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/manual_backup.sh
-    curl -o /home/ubuntu/restore.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore.sh
-    curl -o /home/ubuntu/restore_success.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore_success.sh
-    curl -o /home/ubuntu/restore_failed.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore_failed.sh
-    ```
+Download the scripts:
 
-2. Make the scripts executable:
-    ```sh
-    chmod a+x /home/ubuntu/backup.sh
-    chmod a+x /home/ubuntu/manual_backup.sh
-    chmod a+x /home/ubuntu/restore.sh
-    chmod a+x /home/ubuntu/restore_success.sh
-    chmod a+x /home/ubuntu/restore_failed.sh
-    ```
+```bash
+curl -o /home/ubuntu/backup.sh https://raw.githubusercontent.com/your-repo/foundryvtt-backup-scripts/main/backup.sh
+curl -o /home/ubuntu/manual_backup.sh https://raw.githubusercontent.com/your-repo/foundryvtt-backup-scripts/main/manual_backup.sh
+curl -o /home/ubuntu/restore.sh https://raw.githubusercontent.com/your-repo/foundryvtt-backup-scripts/main/restore.sh
+curl -o /home/ubuntu/restore_success.sh https://raw.githubusercontent.com/your-repo/foundryvtt-backup-scripts/main/restore_success.sh
+curl -o /home/ubuntu/restore_failed.sh https://raw.githubusercontent.com/your-repo/foundryvtt-backup-scripts/main/restore_failed.sh
+curl -o /home/ubuntu/delete_old_backups.sh https://raw.githubusercontent.com/your-repo/foundryvtt-backup-scripts/main/delete_old_backups.sh
+```
 
-3. Set up the cron job to run the automated backup script daily at 4 AM:
-    ```sh
-    sudo crontab -e
-    ```
+Make the scripts executable:
 
-    Add the following line to the crontab file:
-    ```sh
-    0 4 * * * /home/ubuntu/backup.sh
-    ```
+```bash
+chmod a+x /home/ubuntu/backup.sh
+chmod a+x /home/ubuntu/manual_backup.sh
+chmod a+x /home/ubuntu/restore.sh
+chmod a+x /home/ubuntu/restore_success.sh
+chmod a+x /home/ubuntu/restore_failed.sh
+chmod a+x /home/ubuntu/delete_old_backups.sh
+```
 
-## Usage
+### Setup Cron Jobs
+Set up the cron jobs to run the automated scripts:
 
-### Automated Backup
+```bash
+sudo crontab -e
+```
 
-The `backup.sh` script is set up to run daily at 4 AM by the cron job.
+Add the following lines to the crontab file:
 
-### Manual Backup
+```cron
+# Run backup.sh every Wednesday at 4 AM
+0 4 * * 3 /home/ubuntu/backup.sh
 
+# Run backup.sh every day besides Wednesday at 5 AM
+0 5 * * 0,1,2,4,5,6 /home/ubuntu/backup.sh
+
+# Run delete_old_backups.sh on Wednesdays at 5 AM
+0 5 * * 3 /home/ubuntu/delete_old_backups.sh
+```
+
+### Usage
+Automated Backup
+The backup.sh script is set up to run daily at the specified times by the cron job.
+
+#### Manual Backup
 To create a manual backup, run:
-```sh
+
+```bash
 sudo ./manual_backup.sh
 ```
 
-### Restore
-To restore the system to a state from X days ago, run:
+#### Restore
+To restore the system to a specified date, run:
 
-```sh
-sudo ./restore.sh <days_ago>
+```bash
+sudo ./restore.sh
 ```
-To restore the last full backup, run:
-```sh
-sudo ./restore.sh full
-```
+You will be prompted to enter the date and the incremental backup number (if applicable).
 
-### Post-Restore Success Cleanup
+#### Post-Restore Success Cleanup
 To clean up and create a new full backup after a successful restore, run:
 
-```sh
+```bash
 sudo ./restore_success.sh
 ```
 
-### Post-Restore Failure Cleanup
+#### Post-Restore Failure Cleanup
 To revert to the previous state if a restore fails, run:
 
-```sh
+```bash
 sudo ./restore_failed.sh
 ```

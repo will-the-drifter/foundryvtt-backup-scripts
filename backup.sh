@@ -1,60 +1,114 @@
 #!/bin/bash
 
-# Variables
-SOURCE_FOLDERS=("/home/ubuntu/foundry" "/home/ubuntu/foundryuserdata")
-BACKUP_REPO="file:///home/ubuntu/foundrybackup"
-LOG_FILE="/home/ubuntu/duplicity_backup.log"
-DATE=$(date +%d-%m-%Y-%H%M%S)
-FULL_BACKUP_INTERVAL_DAYS=7
+# Directories to backup
+DIR1="/home/ubuntu/foundry"
+DIR2="/home/ubuntu/foundryuserdata"
 
-# Function to log messages
-log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [backup.sh] - $1" | tee -a $LOG_FILE
+# Backup destination
+BACKUP_DIR="/home/ubuntu/backup"
+
+# Log file
+LOG_FILE="/home/ubuntu/logs/backup.log"
+LOW_SPACE_LOG="/home/ubuntu/STORAGE_SPACE_LOW"
+
+# Snapshot file for incremental backups
+SNAPSHOT_FILE="$BACKUP_DIR/snapshot.file"
+
+# Current date and time
+DATE=$(date +%d-%m-%Y_%H-%M-%S)
+TIME=$(date +%H:%M:%S)
+
+# Logging function
+log_message() {
+    echo "[$(date '+%d-%m-%Y %H:%M:%S')] $1" | tee -a $LOG_FILE
 }
 
-# Ensure the script is run with sufficient permissions
+# Function to check available disk space
+check_disk_space() {
+    log_message "Checking disk space..."
+    REQUIRED_SPACE=$(du -s $DIR1 $DIR2 | awk '{sum += $1 * 2} END {print sum}')
+    AVAILABLE_SPACE=$(df /home/ubuntu | awk 'NR==2 {print $4}')
+    
+    log_message "Required space: $REQUIRED_SPACE KB, Available space: $AVAILABLE_SPACE KB"
+
+    if [ "$AVAILABLE_SPACE" -lt "$REQUIRED_SPACE" ]; then
+        touch $LOW_SPACE_LOG
+        log_message "Error: Not enough space for backup. Required: $REQUIRED_SPACE KB, Available: $AVAILABLE_SPACE KB"
+        exit 1
+    fi
+    log_message "Sufficient disk space available."
+}
+
+# Ensure the script is run as root
 if [ "$EUID" -ne 0 ]; then
-    log "ERROR: Please run as root."
+    echo "Please run as root"
     exit 1
 fi
 
-# Check if a full backup is needed
-LAST_BACKUP=$(duplicity collection-status $BACKUP_REPO | grep "Full" | tail -1 | awk '{print $3}')
-if [ -z "$LAST_BACKUP" ]; then
-    DAYS_SINCE_LAST_BACKUP=$FULL_BACKUP_INTERVAL_DAYS
-else
-    LAST_BACKUP_DATE=$(date -d $LAST_BACKUP +%s)
-    CURRENT_DATE=$(date +%s)
-    DAYS_SINCE_LAST_BACKUP=$(( (CURRENT_DATE - LAST_BACKUP_DATE) / 86400 ))
-fi
+log_message "Starting backup script..."
 
-# Perform the backup
-if [ $DAYS_SINCE_LAST_BACKUP -ge $FULL_BACKUP_INTERVAL_DAYS ]; then
-    log "Performing a full backup"
-    BACKUP_TYPE="full"
-else
-    log "Performing an incremental backup"
-    BACKUP_TYPE="incremental"
-fi
-
-# Stop the Foundry program
-log "Stopping Foundry program."
-pm2 stop foundry
-
-# Perform the backup for each source folder
-for SOURCE_FOLDER in "${SOURCE_FOLDERS[@]}"; do
-    log "Starting duplicity $BACKUP_TYPE backup for $SOURCE_FOLDER"
-    duplicity $BACKUP_TYPE $SOURCE_FOLDER $BACKUP_REPO
-    if [ $? -eq 0 ]; then
-        log "$BACKUP_TYPE backup complete for $SOURCE_FOLDER"
-    else
-        log "ERROR: Failed to create $BACKUP_TYPE backup for $SOURCE_FOLDER"
-        exit 1
+# Ensure directories exist
+for DIR in "$DIR1" "$DIR2" "$BACKUP_DIR" "/home/ubuntu/logs"; do
+    if [ ! -d "$DIR" ]; then
+        mkdir -p "$DIR"
+        chown ubuntu:ubuntu "$DIR"
+        log_message "Created directory: $DIR"
     fi
 done
 
-# Start the Foundry program
-log "Starting Foundry program."
-pm2 start foundry
+# Check disk space before proceeding
+check_disk_space
 
-log "Backup process completed successfully."
+# Stop the PM2-managed application
+log_message "Stopping the foundry application..."
+pm2 stop foundry
+if [ $? -eq 0 ]; then
+    log_message "Foundry application stopped successfully."
+else
+    log_message "Error stopping the foundry application."
+    exit 1
+fi
+
+# Determine the type of backup to create
+if [ $(date +%u) -eq 3 ]; then
+    BACKUP_TYPE="full"
+else
+    LATEST_FULL=$(ls -t $BACKUP_DIR/full_backup_${DATE:0:10}_*.tar 2>/dev/null | head -n 1)
+    if [ -z "$LATEST_FULL" ]; then
+        BACKUP_TYPE="full"
+    else
+        BACKUP_TYPE="incremental"
+        INCREMENTAL_COUNT=$(ls $BACKUP_DIR/incremental_backup_${DATE:0:10}_*.tar 2>/dev/null | wc -l)
+        INCREMENTAL_COUNT=$((INCREMENTAL_COUNT + 1))
+    fi
+fi
+
+if [ "$BACKUP_TYPE" == "full" ]; then
+    log_message "Creating full backup..."
+    tar --listed-incremental=$SNAPSHOT_FILE -cvf $BACKUP_DIR/full_backup_${DATE}.tar $DIR1 $DIR2 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log_message "Full backup created: full_backup_${DATE}.tar"
+    else
+        log_message "Error creating full backup: full_backup_${DATE}.tar"
+    fi
+else
+    log_message "Creating incremental backup..."
+    tar --listed-incremental=$SNAPSHOT_FILE -cvf $BACKUP_DIR/incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.tar $DIR1 $DIR2 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log_message "Incremental backup created: incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.tar"
+    else
+        log_message "Error creating incremental backup: incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.tar"
+    fi
+fi
+
+# Start the PM2-managed application
+log_message "Starting the foundry application..."
+pm2 start foundry
+if [ $? -eq 0 ]; then
+    log_message "Foundry application started successfully."
+else
+    log_message "Error starting the foundry application."
+    exit 1
+fi
+
+log_message "Backup completed on $DATE at $TIME"

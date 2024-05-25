@@ -1,36 +1,58 @@
 #!/bin/bash
 
-# Variables
-BACKUP_REPO="file:///home/ubuntu/foundrybackup"
-LOG_FILE="/home/ubuntu/duplicity_restore_success.log"
-FOUNDRY_DIR="/home/ubuntu/foundry"
-FOUNDRYUSERDATA_DIR="/home/ubuntu/foundryuserdata"
-DATE=$(date +%d-%m-%Y-%H%M%S)
+# Directories to handle
+DIR1="/home/ubuntu/foundry"
+DIR2="/home/ubuntu/foundryuserdata"
+OLD_DIR1="${DIR1}-old"
+OLD_DIR2="${DIR2}-old"
 
-# Function to log messages
-log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [restore_success.sh] - $1" | tee -a $LOG_FILE
+# Backup destination
+BACKUP_DIR="/home/ubuntu/backup"
+
+# Log file
+LOG_FILE="/home/ubuntu/logs/restore_successful.log"
+
+# Current date and time
+DATE=$(date +%d-%m-%Y_%H-%M-%S)
+TIME=$(date +%H:%M:%S)
+
+# Logging function
+log_message() {
+    echo "[$(date '+%d-%m-%Y %H:%M:%S')] $1" | tee -a $LOG_FILE
 }
 
-# Ensure the script is run with sufficient permissions
-if [ "$EUID" -ne 0 ]; then
-    log "ERROR: Please run as root."
+log_message "Starting restore successful script..."
+
+# Remove the old directories and their contents
+log_message "Removing old directories and their contents..."
+rm -rf $OLD_DIR1/*
+rm -rf $OLD_DIR2/*
+rm -rf $OLD_DIR1
+rm -rf $OLD_DIR2
+if [ $? -eq 0 ]; then
+    log_message "Old directories removed successfully."
+else
+    log_message "Error removing old directories."
     exit 1
 fi
 
-# Remove old backups and snapshots
-log "Removing old backups and snapshots."
-duplicity remove-all-but-n-full 1 $BACKUP_REPO
+# Create a new full backup
+log_message "Creating a new full backup..."
+tar --listed-incremental=$BACKUP_DIR/snapshot.file -cvf $BACKUP_DIR/full_backup_${DATE}.tar $DIR1 $DIR2 > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    log_message "New full backup created: full_backup_${DATE}.tar"
+else
+    log_message "Error creating new full backup: full_backup_${DATE}.tar"
+    exit 1
+fi
 
-# Perform a new full backup
-log "Creating a new full backup."
-/path/to/backup.sh
+# Remove older backups
+log_message "Removing older backups..."
+find $BACKUP_DIR -type f \( -name "full_backup_*.tar" -o -name "incremental_backup_*.tar" \) ! -newer $BACKUP_DIR/full_backup_${DATE}.tar -exec rm {} \; > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    log_message "Older backups removed successfully."
+else
+    log_message "Error removing older backups."
+fi
 
-# Remove the old backup directories
-log "Removing old backup directories."
-rm -rf /home/ubuntu/foundry-old/*
-rm -rf /home/ubuntu/foundryuserdata-old/*
-rm -rf /home/ubuntu/foundry-old
-rm -rf /home/ubuntu/foundryuserdata-old
-
-log "Restore success process completed successfully."
+log_message "Restore successful script completed on $DATE at $TIME"

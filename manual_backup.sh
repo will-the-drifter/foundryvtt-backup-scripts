@@ -1,40 +1,61 @@
 #!/bin/bash
 
-# Variables
-SOURCE_FOLDERS=("/home/ubuntu/foundry" "/home/ubuntu/foundryuserdata")
-BACKUP_REPO="file:///home/ubuntu/foundrybackup"
-LOG_FILE="/home/ubuntu/duplicity_manual_backup.log"
-DATE=$(date +%d-%m-%Y-%H%M%S)
+# Directories to backup
+DIR1="/home/ubuntu/foundry"
+DIR2="/home/ubuntu/foundryuserdata"
 
-# Function to log messages
-log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [manual_backup.sh] - $1" | tee -a $LOG_FILE
+# Backup destination
+BACKUP_DIR="/home/ubuntu/backup"
+
+# Log file
+LOG_FILE="/home/ubuntu/logs/manual_backup.log"
+
+# Current date and time
+DATE=$(date +%d-%m-%Y_%H-%M-%S)
+TIME=$(date +%H:%M:%S)
+
+# Logging function
+log_message() {
+    echo "[$(date '+%d-%m-%Y %H:%M:%S')] $1" | tee -a $LOG_FILE
 }
 
-# Ensure the script is run with sufficient permissions
+# Ensure the script is run as root
 if [ "$EUID" -ne 0 ]; then
-    log "ERROR: Please run as root."
+    echo "Please run as root"
     exit 1
 fi
 
-# Stop the Foundry program
-log "Stopping Foundry program."
+log_message "Starting manual backup script..."
+
+# Stop the PM2-managed application
+log_message "Stopping the foundry application..."
 pm2 stop foundry
+if [ $? -eq 0 ]; then
+    log_message "Foundry application stopped successfully."
+else
+    log_message "Error stopping the foundry application."
+    exit 1
+fi
 
-# Perform the full backup for each source folder
-for SOURCE_FOLDER in "${SOURCE_FOLDERS[@]}"; do
-    log "Starting duplicity full backup for $SOURCE_FOLDER"
-    duplicity full $SOURCE_FOLDER $BACKUP_REPO
-    if [ $? -eq 0 ]; then
-        log "Full backup complete for $SOURCE_FOLDER"
-    else
-        log "ERROR: Failed to create full backup for $SOURCE_FOLDER"
-        exit 1
-    fi
-done
+# Create a new full backup
+log_message "Creating a new full backup..."
+NEW_FULL_BACKUP="$BACKUP_DIR/manual_full_backup_${DATE}.tar"
+tar -cvf $NEW_FULL_BACKUP $DIR1 $DIR2 > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    log_message "New full backup created: $NEW_FULL_BACKUP"
+else
+    log_message "Error creating new full backup: $NEW_FULL_BACKUP"
+    exit 1
+fi
 
-# Start the Foundry program
-log "Starting Foundry program."
+# Start the PM2-managed application
+log_message "Starting the foundry application..."
 pm2 start foundry
+if [ $? -eq 0 ]; then
+    log_message "Foundry application started successfully."
+else
+    log_message "Error starting the foundry application."
+    exit 1
+fi
 
-log "Manual backup process completed successfully."
+log_message "Manual backup completed on $DATE at $TIME"
