@@ -56,7 +56,8 @@ Add the following lines to the crontab file:
 ```
 
 ### Usage
-Automated Backup
+####Automated Backup
+
 The backup.sh script is set up to run daily at the specified times by the cron job.
 
 #### Manual Backup
