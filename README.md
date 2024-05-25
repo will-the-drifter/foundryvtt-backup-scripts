@@ -48,11 +48,11 @@ Add the following lines to the crontab file:
 # Run backup.sh every Wednesday at 4 AM
 0 4 * * 3 /home/ubuntu/backup.sh
 
+# Run delete_old_backups.sh every Wednesday at 4:30 AM
+30 4 * * 3 /home/ubuntu/delete_old_backups.sh
+
 # Run backup.sh every day besides Wednesday at 5 AM
 0 5 * * 0,1,2,4,5,6 /home/ubuntu/backup.sh
-
-# Run delete_old_backups.sh on Wednesdays at 5 AM
-0 5 * * 3 /home/ubuntu/delete_old_backups.sh
 ```
 
 ### Usage
