@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Variables
-LOG_FILE="/home/ubuntu/restore_failed.log"
+LOG_FILE="/home/ubuntu/borg_restore_failed.log"
 
 # Function to log messages
 log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [restore_failed.sh] - $1" | tee -a $LOG_FILE
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - [borg_restore_failed.sh] - $1" | tee -a $LOG_FILE
 }
 
 # Ensure the script is run with sufficient permissions
@@ -18,18 +18,18 @@ fi
 log "Stopping Foundry program."
 pm2 stop foundry
 
-# Delete the current foundry and foundryuserdata folders
-log "Deleting current foundry and foundryuserdata folders."
+# Remove the current foundry and foundryuserdata folders
+log "Removing current directories."
 rm -rf /home/ubuntu/foundry
 rm -rf /home/ubuntu/foundryuserdata
 
-# Restore the old backups
-log "Restoring old backups."
+# Restore the old foundry and foundryuserdata folders
+log "Restoring old directories."
 mv /home/ubuntu/foundry-old /home/ubuntu/foundry
 mv /home/ubuntu/foundryuserdata-old /home/ubuntu/foundryuserdata
 
-# Remove old directories if they exist
-log "Removing old directories."
+# Remove the old backup directories if they still exist
+log "Cleaning up old backup directories."
 rm -rf /home/ubuntu/foundry-old
 rm -rf /home/ubuntu/foundryuserdata-old
 
@@ -37,4 +37,4 @@ rm -rf /home/ubuntu/foundryuserdata-old
 log "Starting Foundry program."
 pm2 start foundry
 
-log "Restore failed. Reverted to previous state."
+log "Restore failed process completed successfully."
