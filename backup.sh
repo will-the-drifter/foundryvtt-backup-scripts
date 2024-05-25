@@ -2,31 +2,15 @@
 
 # Variables
 SOURCE_FOLDERS=("/home/ubuntu/foundry" "/home/ubuntu/foundryuserdata")
-BACKUP_REPO="/home/ubuntu/foundrybackup"
-LOG_FILE="/home/ubuntu/borg_backup.log"
+BACKUP_REPO="file:///home/ubuntu/foundrybackup"
+LOG_FILE="/home/ubuntu/duplicity_backup.log"
 DATE=$(date +%d-%m-%Y-%H%M%S)
-FULL_BACKUP_INTERVAL_DAYS=8
+FULL_BACKUP_INTERVAL_DAYS=7
 
 # Function to log messages
 log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [borg_backup.sh] - $1" | tee -a $LOG_FILE
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - [backup.sh] - $1" | tee -a $LOG_FILE
 }
-
-# Function to check available disk space
-check_disk_space() {
-    REQUIRED_SPACE=$(du -cs ${SOURCE_FOLDERS[@]} | tail -1 | awk '{print $1}')
-    AVAILABLE_SPACE=$(df $BACKUP_REPO | tail -1 | awk '{print $4}')
-    
-    if [ $REQUIRED_SPACE -gt $AVAILABLE_SPACE ]; then
-        log "ERROR: Not enough disk space. Required: $REQUIRED_SPACE KB, Available: $AVAILABLE_SPACE KB"
-        exit 1
-    fi
-}
-
-# Initialize the backup repository if it doesn't exist
-if [ ! -d "$BACKUP_REPO" ]; then
-    borg init --encryption=repokey $BACKUP_REPO
-fi
 
 # Ensure the script is run with sufficient permissions
 if [ "$EUID" -ne 0 ]; then
@@ -34,26 +18,22 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-# Check disk space before starting the backup process
-check_disk_space
-
-# Determine if a new full backup is needed
-LAST_FULL_BACKUP=$(borg list $BACKUP_REPO --last 1 --format="{end}" 2>/dev/null | grep -oP '\d{4}-\d{2}-\d{2}')
-
-if [ -n "$LAST_FULL_BACKUP" ]; then
-    LAST_FULL_BACKUP_TIMESTAMP=$(date -d "$LAST_FULL_BACKUP" +%s)
-    CURRENT_TIMESTAMP=$(date +%s)
-    DAYS_SINCE_LAST_BACKUP=$(( (CURRENT_TIMESTAMP - LAST_FULL_BACKUP_TIMESTAMP) / 86400 ))
-else
+# Check if a full backup is needed
+LAST_BACKUP=$(duplicity collection-status $BACKUP_REPO | grep "Full" | tail -1 | awk '{print $3}')
+if [ -z "$LAST_BACKUP" ]; then
     DAYS_SINCE_LAST_BACKUP=$FULL_BACKUP_INTERVAL_DAYS
+else
+    LAST_BACKUP_DATE=$(date -d $LAST_BACKUP +%s)
+    CURRENT_DATE=$(date +%s)
+    DAYS_SINCE_LAST_BACKUP=$(( (CURRENT_DATE - LAST_BACKUP_DATE) / 86400 ))
 fi
 
-# Create a new full backup if the last one is older than the specified interval
+# Perform the backup
 if [ $DAYS_SINCE_LAST_BACKUP -ge $FULL_BACKUP_INTERVAL_DAYS ]; then
-    log "Creating a new full backup"
+    log "Performing a full backup"
     BACKUP_TYPE="full"
 else
-    log "Creating an incremental backup"
+    log "Performing an incremental backup"
     BACKUP_TYPE="incremental"
 fi
 
@@ -61,16 +41,15 @@ fi
 log "Stopping Foundry program."
 pm2 stop foundry
 
-# Perform the backup using borg
+# Perform the backup for each source folder
 for SOURCE_FOLDER in "${SOURCE_FOLDERS[@]}"; do
-    ARCHIVE_NAME="$BACKUP_REPO::$SOURCE_FOLDER-$DATE"
-    
-    log "Starting borg backup for $SOURCE_FOLDER"
-    borg create --stats --progress $ARCHIVE_NAME "$SOURCE_FOLDER"
+    log "Starting duplicity $BACKUP_TYPE backup for $SOURCE_FOLDER"
+    duplicity $BACKUP_TYPE $SOURCE_FOLDER $BACKUP_REPO
     if [ $? -eq 0 ]; then
-        log "Backup complete for $SOURCE_FOLDER to $ARCHIVE_NAME"
+        log "$BACKUP_TYPE backup complete for $SOURCE_FOLDER"
     else
-        log "ERROR: Failed to backup $SOURCE_FOLDER"
+        log "ERROR: Failed to create $BACKUP_TYPE backup for $SOURCE_FOLDER"
+        exit 1
     fi
 done
 

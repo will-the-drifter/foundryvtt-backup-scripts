@@ -8,24 +8,15 @@ fi
 
 # Variables
 ARG=$1
-BACKUP_REPO="/home/ubuntu/foundrybackup"
-LOG_FILE="/home/ubuntu/borg_restore.log"
+BACKUP_REPO="file:///home/ubuntu/foundrybackup"
+LOG_FILE="/home/ubuntu/duplicity_restore.log"
+FOUNDRY_DIR="/home/ubuntu/foundry"
+FOUNDRYUSERDATA_DIR="/home/ubuntu/foundryuserdata"
 DATE=$(date +%d-%m-%Y-%H%M%S)
 
 # Function to log messages
 log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [borg_restore.sh] - $1" | tee -a $LOG_FILE
-}
-
-# Function to check available disk space
-check_disk_space() {
-    REQUIRED_SPACE=$(borg list $BACKUP_REPO --last 1 --format="{size}" | awk '{print $1}')
-    AVAILABLE_SPACE=$(df /home/ubuntu | tail -1 | awk '{print $4}')
-    
-    if [ $REQUIRED_SPACE -gt $AVAILABLE_SPACE ]; then
-        log "ERROR: Not enough disk space. Required: $REQUIRED_SPACE KB, Available: $AVAILABLE_SPACE KB"
-        exit 1
-    fi
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - [restore.sh] - $1" | tee -a $LOG_FILE
 }
 
 # Ensure the script is run with sufficient permissions
@@ -33,12 +24,6 @@ if [ "$EUID" -ne 0 ]; then
     log "ERROR: Please run as root."
     exit 1
 fi
-
-# Ensure restore location exists
-mkdir -p /home/ubuntu
-
-# Check disk space before stopping the Foundry program
-check_disk_space
 
 # Stop the Foundry program
 log "Stopping Foundry program."
@@ -62,15 +47,8 @@ rm -rf /home/ubuntu/foundryuserdata
 # Function to restore the last full backup
 restore_full_backup() {
     log "Restoring the last full backup."
-    FULL_BACKUP=$(borg list $BACKUP_REPO --last 1 --format="{archive}")
-
-    if [ -z "$FULL_BACKUP" ]; then
-        log "ERROR: No full backup found."
-        exit 1
-    fi
-
-    log "Full backup found: $FULL_BACKUP"
-    borg extract $BACKUP_REPO::"$FULL_BACKUP"
+    duplicity restore --force $BACKUP_REPO $FOUNDRY_DIR
+    duplicity restore --force $BACKUP_REPO $FOUNDRYUSERDATA_DIR
     if [ $? -eq 0 ]; then
         log "Full backup restored successfully."
     else
@@ -85,26 +63,14 @@ restore_incremental_backup() {
     DATE=$(date -d "$DAYS_AGO days ago" +%Y-%m-%d)
     
     log "Restoring to a state from $DAYS_AGO days ago."
-
-    # Find the backup archives from the specified date
-    ARCHIVES=$(borg list $BACKUP_REPO --format="{archive} {end}" | awk -v date="$DATE" '$2 <= date {print $1}' | sort)
-
-    if [ -z "$ARCHIVES" ]; then
-        log "ERROR: No backups found for the specified date."
+    duplicity restore --force --time "$DATE" $BACKUP_REPO $FOUNDRY_DIR
+    duplicity restore --force --time "$DATE" $BACKUP_REPO $FOUNDRYUSERDATA_DIR
+    if [ $? -eq 0 ]; then
+        log "Backup restored successfully to state from $DAYS_AGO days ago."
+    else
+        log "ERROR: Failed to restore backup."
         exit 1
     fi
-
-    # Restore the archives in order
-    for ARCHIVE in $ARCHIVES; do
-        log "Restoring backup: $ARCHIVE"
-        borg extract $BACKUP_REPO::"$ARCHIVE"
-        if [ $? -eq 0 ]; then
-            log "Backup $ARCHIVE restored successfully."
-        else
-            log "ERROR: Failed to restore backup: $ARCHIVE"
-            exit 1
-        fi
-    done
 }
 
 # Main logic to choose the restore method
@@ -113,6 +79,11 @@ if [ "$ARG" == "full" ]; then
 else
     restore_incremental_backup "$ARG"
 fi
+
+# Change ownership of the restored files
+log "Changing ownership of the restored files."
+sudo chown -R ubuntu:ubuntu "$FOUNDRY_DIR"
+sudo chown -R ubuntu:ubuntu "$FOUNDRYUSERDATA_DIR"
 
 # Start the Foundry program
 log "Starting Foundry program."

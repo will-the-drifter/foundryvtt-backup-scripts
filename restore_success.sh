@@ -1,13 +1,15 @@
 #!/bin/bash
 
 # Variables
-BACKUP_REPO="/home/ubuntu/foundrybackup"
-LOG_FILE="/home/ubuntu/borg_restore_success.log"
+BACKUP_REPO="file:///home/ubuntu/foundrybackup"
+LOG_FILE="/home/ubuntu/duplicity_restore_success.log"
+FOUNDRY_DIR="/home/ubuntu/foundry"
+FOUNDRYUSERDATA_DIR="/home/ubuntu/foundryuserdata"
 DATE=$(date +%d-%m-%Y-%H%M%S)
 
 # Function to log messages
 log() {
-    echo "$(date +'%Y-%m-%d %H:%M:%S') - [borg_restore_success.sh] - $1" | tee -a $LOG_FILE
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - [restore_success.sh] - $1" | tee -a $LOG_FILE
 }
 
 # Ensure the script is run with sufficient permissions
@@ -18,14 +20,16 @@ fi
 
 # Remove old backups and snapshots
 log "Removing old backups and snapshots."
-borg prune --stats --keep-daily=7 --keep-weekly=4 --keep-monthly=6 $BACKUP_REPO
+duplicity remove-all-but-n-full 1 $BACKUP_REPO
 
 # Perform a new full backup
 log "Creating a new full backup."
-backup.sh
+/path/to/backup.sh
 
 # Remove the old backup directories
 log "Removing old backup directories."
+rm -rf /home/ubuntu/foundry-old/*
+rm -rf /home/ubuntu/foundryuserdata-old/*
 rm -rf /home/ubuntu/foundry-old
 rm -rf /home/ubuntu/foundryuserdata-old
 
