@@ -70,17 +70,13 @@ else
 fi
 
 # Determine the type of backup to create
-if [ $(date +%u) -eq 3 ]; then
+LATEST_FULL=$(ls -t $BACKUP_DIR/full_backup_*.tar 2>/dev/null | head -n 1)
+if [ -z "$LATEST_FULL" ]; then
     BACKUP_TYPE="full"
 else
-    LATEST_FULL=$(ls -t $BACKUP_DIR/full_backup_${DATE:0:10}_*.tar 2>/dev/null | head -n 1)
-    if [ -z "$LATEST_FULL" ]; then
-        BACKUP_TYPE="full"
-    else
-        BACKUP_TYPE="incremental"
-        INCREMENTAL_COUNT=$(ls $BACKUP_DIR/incremental_backup_${DATE:0:10}_*.tar 2>/dev/null | wc -l)
-        INCREMENTAL_COUNT=$((INCREMENTAL_COUNT + 1))
-    fi
+    BACKUP_TYPE="incremental"
+    INCREMENTAL_COUNT=$(ls $BACKUP_DIR/incremental_backup_${DATE:0:10}_*.tar 2>/dev/null | wc -l)
+    INCREMENTAL_COUNT=$((INCREMENTAL_COUNT + 1))
 fi
 
 if [ "$BACKUP_TYPE" == "full" ]; then
