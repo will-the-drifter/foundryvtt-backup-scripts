@@ -10,6 +10,8 @@ BACKUP_DIR="/home/ubuntu/backup"
 # Log file
 LOG_FILE="/home/ubuntu/logs/backup.log"
 LOW_SPACE_LOG="/home/ubuntu/STORAGE_SPACE_LOW"
+BACKUP_FILES_LOG_DIR="/home/ubuntu/logs/backup_files"
+mkdir -p $BACKUP_FILES_LOG_DIR
 
 # Snapshot file for incremental backups
 SNAPSHOT_FILE="$BACKUP_DIR/snapshot.file"
@@ -81,7 +83,8 @@ fi
 
 if [ "$BACKUP_TYPE" == "full" ]; then
     log_message "Creating full backup..."
-    tar --listed-incremental=$SNAPSHOT_FILE -cvf $BACKUP_DIR/full_backup_${DATE}.tar $DIR1 $DIR2 > /dev/null 2>&1
+    FULL_BACKUP_FILE="$BACKUP_DIR/full_backup_${DATE}.tar"
+    tar --listed-incremental=$SNAPSHOT_FILE -cvf $FULL_BACKUP_FILE $DIR1 $DIR2 > $BACKUP_FILES_LOG_DIR/full_backup_${DATE}.log 2>&1
     if [ $? -eq 0 ]; then
         log_message "Full backup created: full_backup_${DATE}.tar"
     else
@@ -89,7 +92,8 @@ if [ "$BACKUP_TYPE" == "full" ]; then
     fi
 else
     log_message "Creating incremental backup..."
-    tar --listed-incremental=$SNAPSHOT_FILE -cvf $BACKUP_DIR/incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.tar $DIR1 $DIR2 > /dev/null 2>&1
+    INCREMENTAL_BACKUP_FILE="$BACKUP_DIR/incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.tar"
+    tar --listed-incremental=$SNAPSHOT_FILE -cvf $INCREMENTAL_BACKUP_FILE $DIR1 $DIR2 > $BACKUP_FILES_LOG_DIR/incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.log 2>&1
     if [ $? -eq 0 ]; then
         log_message "Incremental backup created: incremental_backup_${DATE:0:10}_${INCREMENTAL_COUNT}.tar"
     else
