@@ -4,7 +4,7 @@
 BACKUP_DIR="/home/ubuntu/backup"
 
 # Log file
-LOG_FILE="/home/ubuntu/logs/backup.log"
+LOG_FILE="/home/ubuntu/logs/delete_old_backups.log"
 
 # Current date and time
 DATE=$(date +%d-%m-%Y_%H-%M-%S)
@@ -17,23 +17,14 @@ log_message() {
 
 log_message "Starting old backup deletion script..."
 
-# Find the newest full backup
-NEWEST_FULL_BACKUP=$(ls -t $BACKUP_DIR/full_backup_*.tar 2>/dev/null | head -n 1)
+# Find and remove backups older than 3 hours
+log_message "Removing backups older than 3 hours..."
+DELETED_FILES=$(find $BACKUP_DIR -type f -mmin +180 -exec rm {} \; -print)
 
-if [ -z "$NEWEST_FULL_BACKUP" ]; then
-    log_message "Error: No full backups found."
-    exit 1
-fi
-
-log_message "Newest full backup: $NEWEST_FULL_BACKUP"
-
-# Remove backups older than the newest full backup
-log_message "Removing backups older than the newest full backup..."
-find $BACKUP_DIR -type f \( -name "full_backup_*.tar" -o -name "incremental_backup_*.tar" \) ! -newer "$NEWEST_FULL_BACKUP" -exec rm {} \; > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-    log_message "Old backups removed successfully."
+if [ -z "$DELETED_FILES" ]; then
+    log_message "No old backups found to delete."
 else
-    log_message "Error removing old backups."
+    log_message "Old backups removed successfully: $DELETED_FILES"
 fi
 
 log_message "Old backup deletion script completed on $DATE at $TIME"

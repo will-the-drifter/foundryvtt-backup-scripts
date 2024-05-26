@@ -10,6 +10,7 @@ This repository contains a set of bash scripts for automating backup and restore
 - `restore_success.sh`: Cleans up old backups and creates a new full backup after a successful restore.
 - `restore_failed.sh`: Reverts the system to the previous state if a restore fails.
 - `delete_old_backups.sh`: Deletes old backups that are older than the most recent full backup.
+- `run_backups.sh`: Wrapper script that runs `delete_old_backups.sh` on Wednesdays and then runs `backup.sh`.
 
 ## Installation
 
@@ -22,6 +23,7 @@ curl -o /home/ubuntu/restore.sh https://raw.githubusercontent.com/will-the-drift
 curl -o /home/ubuntu/restore_success.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore_success.sh
 curl -o /home/ubuntu/restore_failed.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/restore_failed.sh
 curl -o /home/ubuntu/delete_old_backups.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/delete_old_backups.sh
+curl -o /home/ubuntu/run_backups.sh https://raw.githubusercontent.com/will-the-drifter/foundryvtt-backup-scripts/main/run_backups.sh
 ```
 
 Make the scripts executable:
@@ -33,6 +35,7 @@ chmod a+x /home/ubuntu/restore.sh
 chmod a+x /home/ubuntu/restore_success.sh
 chmod a+x /home/ubuntu/restore_failed.sh
 chmod a+x /home/ubuntu/delete_old_backups.sh
+chmod a+x /home/ubuntu/run_backups.sh
 ```
 
 ### Setup Cron Jobs
@@ -45,20 +48,14 @@ sudo crontab -e
 Add the following lines to the crontab file:
 
 ```cron
-# Run backup.sh every Wednesday at 4 AM
-0 4 * * 3 /home/ubuntu/backup.sh
-
-# Run delete_old_backups.sh every Wednesday at 4:30 AM
-30 4 * * 3 /home/ubuntu/delete_old_backups.sh
-
-# Run backup.sh every day besides Wednesday at 5 AM
-0 5 * * 0,1,2,4,5,6 /home/ubuntu/backup.sh
+# Run the wrapper script every day at 4 AM
+0 4 * * * /home/ubuntu/run_backups.sh
 ```
 
 ### Usage
 #### Automated Backup
 
-The backup.sh script is set up to run daily at the specified times by the cron job.
+The run_backups.sh script is set up to run daily at 4 AM by the cron job. It runs delete_old_backups.sh first if it is Wednesday, followed by backup.sh.
 
 #### Manual Backup
 To create a manual backup, run:
